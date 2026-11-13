@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "entities": [
+    {
+      "id": 0,
+      "parent": null,
+      "transform": {
+        "translation": [0.0, 1.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": 1.0
+      },
+      "model": null
+    },
+    {
+      "id": 1,
+      "parent": 0,
+      "transform": {
+        "translation": [1.5, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": 1.0
+      },
+      "model": "assets/models/BoxTextured.glb"
+    },
+    {
+      "id": 2,
+      "parent": 0,
+      "transform": {
+        "translation": [-1.5, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": 1.0
+      },
+      "model": "assets/models/BoxTextured.glb"
+    },
+    {
+      "id": 3,
+      "parent": null,
+      "transform": {
+        "translation": [0.0, -0.1, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": 1.0
+      },
+      "model": null,
+      "collider": { "half_extents": [20.0, 0.1, 20.0] }
+    },
+    {
+      "id": 4,
+      "parent": null,
+      "transform": {
+        "translation": [2.0, 1.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": 1.0
+      },
+      "model": null,
+      "collider": { "half_extents": [0.1, 1.0, 4.0] }
+    },
+    {
+      "id": 5,
+      "parent": null,
+      "transform": {
+        "translation": [0.0, 1.0, -4.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": 1.0
+      },
+      "model": null,
+      "collider": { "half_extents": [5.0, 1.0, 0.1] }
+    }
+  ]
+}

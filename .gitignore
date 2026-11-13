@@ -1,0 +1,7 @@
+/target/
+/artifacts/
+__pycache__/
+*.py[cod]
+**/*.rs.bk
+.vs/
+.idea/

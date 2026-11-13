@@ -1,0 +1,18 @@
+[package]
+name = "engine_render"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+bytemuck.workspace = true
+egui.workspace = true
+egui-wgpu.workspace = true
+engine_assets = { path = "../engine_assets" }
+engine_platform = { path = "../engine_platform" }
+glam.workspace = true
+pollster.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+wgpu.workspace = true

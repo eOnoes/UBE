@@ -1,0 +1,18 @@
+[package]
+name = "engine_runtime"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+egui.workspace = true
+engine_assets = { path = "../engine_assets" }
+engine_audio = { path = "../engine_audio" }
+engine_core = { path = "../engine_core" }
+engine_physics = { path = "../engine_physics" }
+engine_platform = { path = "../engine_platform" }
+engine_render = { path = "../engine_render" }
+engine_scene = { path = "../engine_scene" }
+thiserror.workspace = true
+tracing.workspace = true
