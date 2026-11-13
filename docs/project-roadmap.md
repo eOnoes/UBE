@@ -52,6 +52,7 @@ All items below are required:
 | M7 | Reference-scene performance, release hardening, and final acceptance evidence | COMPLETE | `milestone-7-checkpoint.md` |
 | UBE-1 | UBE / nerd 0.1 identity and first-person, third-person, and top-down gameplay cameras | COMPLETE | `nerd-0.1-checkpoint.md` |
 | UBE-2 | Engine-only repository and documented external game dependency workflow | COMPLETE | `creating-a-game.md` and external consumer verification |
+| UBE-3 | Grounded jumping, crouching, prone, headroom checks, and stamina sprinting | COMPLETE | 71 tests and `movement_smoke.py` Windows verification |
 | NET-1 | Online multiplayer architecture and first playable network slice | NOT STARTED | Scope required before implementation |
 
 ## Current release
@@ -60,8 +61,8 @@ All items below are required:
 
 ### Current verification
 
-- Workspace formatting, all-target compilation, strict Clippy, **65 tests**, and release build: PASS.
-- All **nine Windows engine smoke scripts**: PASS.
+- Workspace formatting, all-target compilation, strict Clippy, **71 tests**, and release build: PASS.
+- All **ten Windows engine smoke scripts**: PASS, including real Space / Ctrl / Z / Shift movement input.
 - An external game project resolves the published `engine` package from GitHub and builds through the public facade: PASS.
 - Historical reference-scene benchmark: **119.966 aggregate FPS**, **119.925 minimum interval FPS**, and **8.336 ms weighted average frame time** over 1,201 frames and 10.011192 seconds at 1280×720 on the RTX 4080 SUPER.
 - Engine architecture and measured results: `nerd-0.1-checkpoint.md`. External game setup: `creating-a-game.md`.

@@ -8,10 +8,48 @@ use rapier3d::control::KinematicCharacterController;
 use rapier3d::na::{Quaternion, UnitQuaternion};
 use rapier3d::prelude::*;
 
-const PLAYER_HALF_HEIGHT: f32 = 0.6;
 const PLAYER_RADIUS: f32 = 0.3;
+const STANDING_HALF_HEIGHT: f32 = 0.6;
+const CROUCHING_HALF_HEIGHT: f32 = 0.35;
+const PRONE_HALF_HEIGHT: f32 = 0.05;
 const GRAVITY: f32 = -20.0;
 const MAX_FALL_SPEED: f32 = 40.0;
+
+/// Collision and movement posture for a player character.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum PlayerStance {
+    #[default]
+    Standing,
+    Crouching,
+    Prone,
+}
+
+impl PlayerStance {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Standing => "Standing",
+            Self::Crouching => "Crouching",
+            Self::Prone => "Prone",
+        }
+    }
+
+    fn capsule(self) -> Capsule {
+        let half_height = match self {
+            Self::Standing => STANDING_HALF_HEIGHT,
+            Self::Crouching => CROUCHING_HALF_HEIGHT,
+            Self::Prone => PRONE_HALF_HEIGHT,
+        };
+        Capsule::new_y(half_height, PLAYER_RADIUS)
+    }
+
+    fn center_height(self) -> f32 {
+        (match self {
+            Self::Standing => STANDING_HALF_HEIGHT,
+            Self::Crouching => CROUCHING_HALF_HEIGHT,
+            Self::Prone => PRONE_HALF_HEIGHT,
+        }) + PLAYER_RADIUS
+    }
+}
 
 /// Result of a collision-aware character movement step.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -28,6 +66,7 @@ pub struct PhysicsWorld {
     narrow_phase: NarrowPhase,
     controller: KinematicCharacterController,
     character_shape: Capsule,
+    stance: PlayerStance,
     position: Vector,
     vertical_velocity: f32,
     grounded: bool,
@@ -89,12 +128,59 @@ impl PhysicsWorld {
             broad_phase,
             narrow_phase,
             controller: KinematicCharacterController::default(),
-            character_shape: Capsule::new_y(PLAYER_HALF_HEIGHT, PLAYER_RADIUS),
+            character_shape: PlayerStance::Standing.capsule(),
+            stance: PlayerStance::Standing,
             position: Vector::from(eye_position),
             vertical_velocity: 0.0,
             grounded: false,
             static_collider_count,
         }
+    }
+
+    /// Changes capsule height while preserving foot position and rejecting occupied space.
+    pub fn set_stance(&mut self, stance: PlayerStance) -> bool {
+        if self.stance == stance {
+            return true;
+        }
+        let target =
+            self.position + Vector::Y * (stance.center_height() - self.stance.center_height());
+        let shape = stance.capsule();
+        let queries = self.broad_phase.as_query_pipeline(
+            self.narrow_phase.query_dispatcher(),
+            &self.bodies,
+            &self.colliders,
+            QueryFilter::default(),
+        );
+        if queries
+            .intersect_shape(Pose::from_translation(target + Vector::Y * 0.02), &shape)
+            .next()
+            .is_some()
+        {
+            return false;
+        }
+        self.character_shape = shape;
+        self.stance = stance;
+        self.position = target;
+        self.vertical_velocity = self.vertical_velocity.min(0.0);
+        true
+    }
+
+    /// Starts a standing jump. Returns false while airborne, crouching, or prone.
+    pub fn jump(&mut self, speed: f32) -> bool {
+        if !self.grounded || self.stance != PlayerStance::Standing || speed <= 0.0 {
+            return false;
+        }
+        self.vertical_velocity = speed;
+        self.grounded = false;
+        true
+    }
+
+    pub fn grounded(&self) -> bool {
+        self.grounded
+    }
+
+    pub fn stance(&self) -> PlayerStance {
+        self.stance
     }
 
     pub fn move_character(
@@ -209,5 +295,53 @@ mod tests {
 
         assert!(movement.position[0] < 0.62);
         assert!(movement.position[2] > -0.5);
+    }
+
+    #[test]
+    fn stance_changes_preserve_feet_and_restore_standing_height() {
+        let scene = collision_scene();
+        let mut physics = PhysicsWorld::from_scene(&scene, [0.0, 0.91, -1.0]);
+        for _ in 0..10 {
+            physics.move_character([0.0; 3], STEP);
+        }
+
+        assert!(physics.set_stance(PlayerStance::Crouching));
+        assert!((physics.position()[1] - 0.65).abs() < 0.03);
+        assert!(physics.set_stance(PlayerStance::Prone));
+        assert!((physics.position()[1] - 0.35).abs() < 0.03);
+        assert!(physics.set_stance(PlayerStance::Standing));
+        assert!((physics.position()[1] - 0.9).abs() < 0.03);
+    }
+
+    #[test]
+    fn jumping_requires_standing_ground_contact() {
+        let scene = collision_scene();
+        let mut physics = PhysicsWorld::from_scene(&scene, [0.0, 0.91, -1.0]);
+        for _ in 0..10 {
+            physics.move_character([0.0; 3], STEP);
+        }
+        assert!(physics.set_stance(PlayerStance::Crouching));
+        assert!(!physics.jump(7.0));
+        assert!(physics.set_stance(PlayerStance::Standing));
+
+        let start_height = physics.position()[1];
+        assert!(physics.jump(7.0));
+        let movement = physics.move_character([0.0; 3], Duration::from_millis(100));
+        assert!(movement.position[1] > start_height + 0.4);
+        for _ in 0..120 {
+            physics.move_character([0.0; 3], STEP);
+        }
+        assert!(physics.grounded());
+    }
+
+    #[test]
+    fn standing_is_rejected_under_a_low_ceiling() {
+        let mut scene = collision_scene();
+        let ceiling = scene.spawn(Transform::default().with_translation([0.0, 1.5, -1.0]));
+        scene.set_collider(ceiling, Some(BoxCollider::new([2.0, 0.1, 2.0]).unwrap()));
+        let mut physics = PhysicsWorld::from_scene(&scene, [0.0, 0.91, -1.0]);
+        assert!(physics.set_stance(PlayerStance::Crouching));
+        assert!(!physics.set_stance(PlayerStance::Standing));
+        assert_eq!(physics.stance(), PlayerStance::Crouching);
     }
 }

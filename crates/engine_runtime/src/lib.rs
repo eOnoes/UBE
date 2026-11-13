@@ -11,6 +11,7 @@ mod simulation;
 pub use camera_mode::CameraMode;
 pub use config::AppConfig;
 pub use engine_core::{CARGO_PACKAGE_VERSION, ENGINE_NAME, ENGINE_SHORT_NAME, RELEASE_VERSION};
+pub use engine_physics::PlayerStance;
 pub use engine_scene::{
     BoxCollider, ColliderError, Entity, ModelReference, Scene, SceneDataError, SceneDocument,
     SceneEntity, SceneError, SceneFileError, Transform, load_scene, save_scene,

@@ -82,6 +82,9 @@ impl GameHudPresenter {
                             hud.hunger,
                             egui::Color32::from_rgb(232, 177, 74),
                         );
+                        if let Some(energy) = hud.energy {
+                            meter(ui, "ENERGY", energy, egui::Color32::from_rgb(85, 184, 154));
+                        }
                         ui.add_space(4.0);
                         ui.label(egui::RichText::new(&hud.objective).size(12.0));
                     });

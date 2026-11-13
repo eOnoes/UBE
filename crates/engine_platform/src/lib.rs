@@ -102,6 +102,10 @@ pub enum Key {
     C,
     F,
     X,
+    Z,
+    Space,
+    ShiftLeft,
+    ControlLeft,
     Digit1,
     Digit2,
     Digit3,
@@ -355,6 +359,10 @@ fn map_key(key: PhysicalKey) -> Option<Key> {
         PhysicalKey::Code(KeyCode::KeyC) => Some(Key::C),
         PhysicalKey::Code(KeyCode::KeyF) => Some(Key::F),
         PhysicalKey::Code(KeyCode::KeyX) => Some(Key::X),
+        PhysicalKey::Code(KeyCode::KeyZ) => Some(Key::Z),
+        PhysicalKey::Code(KeyCode::Space) => Some(Key::Space),
+        PhysicalKey::Code(KeyCode::ShiftLeft) => Some(Key::ShiftLeft),
+        PhysicalKey::Code(KeyCode::ControlLeft) => Some(Key::ControlLeft),
         PhysicalKey::Code(KeyCode::Digit1) => Some(Key::Digit1),
         PhysicalKey::Code(KeyCode::Digit2) => Some(Key::Digit2),
         PhysicalKey::Code(KeyCode::Digit3) => Some(Key::Digit3),
@@ -394,6 +402,16 @@ mod tests {
         assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyW)), Some(Key::W));
         assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyV)), Some(Key::V));
         assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyE)), Some(Key::E));
+        assert_eq!(map_key(PhysicalKey::Code(KeyCode::Space)), Some(Key::Space));
+        assert_eq!(
+            map_key(PhysicalKey::Code(KeyCode::ShiftLeft)),
+            Some(Key::ShiftLeft)
+        );
+        assert_eq!(
+            map_key(PhysicalKey::Code(KeyCode::ControlLeft)),
+            Some(Key::ControlLeft)
+        );
+        assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyZ)), Some(Key::Z));
         assert_eq!(
             map_key(PhysicalKey::Code(KeyCode::Escape)),
             Some(Key::Escape)

@@ -7,8 +7,9 @@
 - Native DirectX 12 rendering and validated textured GLB models
 - First-person, third-person, and top-down cameras
 - Keyboard movement and mouse look
+- Jumping, crouching, prone movement, and stamina-based sprinting
 - Fixed-step simulation and hierarchical scene transforms
-- Physics-backed character collision
+- Physics-backed character collision with stance headroom checks
 - WAV audio playback and named gameplay sound effects
 - Versioned scene save/load and debug property inspection
 - An application-facing `GamePlugin` API for game-owned rules and HUD data
@@ -25,6 +26,19 @@ cargo run --release --bin engine-gallery
 ```
 
 The sandbox can open a scene and an optional footstep WAV passed as command-line arguments. The gallery constructs its own scene entirely through the public engine API.
+
+### Sandbox controls
+
+| Input | Action |
+| --- | --- |
+| W / A / S / D | Move |
+| Right mouse | Hold for mouse look |
+| Space | Jump while standing on the ground |
+| Left Ctrl | Toggle crouching / standing |
+| Z | Toggle prone / standing |
+| Left Shift | Hold with movement to sprint; energy recovers when not sprinting |
+| V | Cycle first-person, third-person, and top-down cameras |
+| Escape | Release mouse capture |
 
 ## Use UBE in your own game
 
@@ -92,6 +106,7 @@ Windows native checks:
 ```sh
 python tools/render_smoke.py
 python tools/input_smoke.py
+python tools/movement_smoke.py
 python tools/camera_smoke.py
 python tools/collision_smoke.py
 python tools/audio_smoke.py

@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use engine_physics::PlayerStance;
 use engine_scene::Scene;
 
 use crate::CameraMode;
@@ -24,6 +25,10 @@ pub struct PlayerSnapshot {
     pub yaw: f32,
     pub pitch: f32,
     pub camera_mode: CameraMode,
+    pub stance: PlayerStance,
+    pub sprint_energy: f32,
+    pub sprinting: bool,
+    pub grounded: bool,
 }
 
 /// Side effects requested by gameplay and applied by the engine at a safe boundary.
@@ -78,6 +83,7 @@ pub struct GameHud {
     pub controls: String,
     pub health: f32,
     pub hunger: f32,
+    pub energy: Option<f32>,
     pub slots: Vec<HudSlot>,
     pub crosshair: bool,
     pub intro_seconds: f32,

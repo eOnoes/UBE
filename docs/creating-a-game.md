@@ -137,6 +137,18 @@ fn main() {
 
 Register game audio with `with_sound_effect` and footsteps with `with_footstep_sound_path` when audio is enabled. See `examples/gallery` for a complete scene-construction example without a gameplay plugin.
 
+## Character movement
+
+UBE owns the reusable character controller and exposes its current state through `PlayerSnapshot`:
+
+- **Space** jumps when the standing character is grounded.
+- **Left Ctrl** toggles crouching and standing; from prone it enters crouching.
+- **Z** toggles prone and standing.
+- **Left Shift** sprints while held with movement input. Sprinting consumes energy and only works while standing; energy recovers when sprinting stops.
+- Standing is rejected when the larger capsule would intersect a low ceiling.
+
+Use `snapshot.stance`, `snapshot.sprint_energy`, `snapshot.sprinting`, and `snapshot.grounded` for game rules, animation state, and HUD presentation. Set `GameHud.energy` to `Some(snapshot.sprint_energy)` to display the built-in energy meter, or `None` for games without sprint energy. Tool swings, weapon recoil, game-specific sounds, and other presentation remain game-owned.
+
 ## Ownership boundary
 
 UBE provides the native window, physical input mapping, rendering, cameras, character movement, collision world, fixed-step scheduling, scene services, HUD presentation, and audio output.

@@ -52,6 +52,14 @@ impl Transform {
         self
     }
 
+    /// Composes a local X-axis rotation for recoil, swinging, and similar motion.
+    pub fn rotated_x(mut self, radians: f32) -> Self {
+        self.rotation = (Quat::from_array(self.rotation) * Quat::from_rotation_x(radians))
+            .normalize()
+            .to_array();
+        self
+    }
+
     pub fn with_scale(mut self, scale: f32) -> Self {
         assert!(
             scale.is_finite() && scale > 0.0,
