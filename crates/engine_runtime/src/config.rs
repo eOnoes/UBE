@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use engine_scene::Scene;
 
-use crate::{CameraMode, simulation::SceneUpdate};
+use crate::{CameraMode, game::GamePlugin, simulation::SceneUpdate};
 
 /// Application-facing runtime configuration.
 pub struct AppConfig {
@@ -11,7 +11,9 @@ pub struct AppConfig {
     scene_path: PathBuf,
     initial_scene: Option<Scene>,
     scene_update: Option<SceneUpdate>,
+    game_plugin: Option<Box<dyn GamePlugin>>,
     footstep_sound_path: Option<PathBuf>,
+    sound_effects: Vec<(String, PathBuf)>,
     workspace_scene_path: PathBuf,
     camera_mode: CameraMode,
 }
@@ -23,7 +25,9 @@ impl AppConfig {
             scene_path: PathBuf::from("assets/scenes/orbit.scene.json"),
             initial_scene: None,
             scene_update: None,
+            game_plugin: None,
             footstep_sound_path: Some(PathBuf::from("assets/audio/footstep.wav")),
+            sound_effects: Vec::new(),
             workspace_scene_path: PathBuf::from("artifacts/runtime/edited.scene.json"),
             camera_mode: CameraMode::default(),
         }
@@ -47,15 +51,28 @@ impl AppConfig {
         self
     }
 
+    /// Installs renderer-neutral application gameplay hooks.
+    pub fn with_game_plugin(mut self, plugin: impl GamePlugin) -> Self {
+        self.game_plugin = Some(Box::new(plugin));
+        self
+    }
+
+    /// Registers a named WAV clip that gameplay can request through GameFeedback.
+    pub fn with_sound_effect(mut self, name: impl Into<String>, path: impl Into<PathBuf>) -> Self {
+        self.sound_effects.push((name.into(), path.into()));
+        self
+    }
+
     /// Selects the WAV clip used for grounded character footsteps.
     pub fn with_footstep_sound_path(mut self, path: impl Into<PathBuf>) -> Self {
         self.footstep_sound_path = Some(path.into());
         self
     }
 
-    /// Disables audio output and gameplay footstep requests for this application.
+    /// Disables audio output and all gameplay playback requests.
     pub fn without_audio(mut self) -> Self {
         self.footstep_sound_path = None;
+        self.sound_effects.clear();
         self
     }
 
@@ -83,6 +100,10 @@ impl AppConfig {
         self.footstep_sound_path.as_deref()
     }
 
+    pub fn sound_effects(&self) -> &[(String, PathBuf)] {
+        &self.sound_effects
+    }
+
     pub fn workspace_scene_path(&self) -> &Path {
         &self.workspace_scene_path
     }
@@ -97,6 +118,10 @@ impl AppConfig {
 
     pub(crate) fn take_scene_update(&mut self) -> Option<SceneUpdate> {
         self.scene_update.take()
+    }
+
+    pub(crate) fn take_game_plugin(&mut self) -> Option<Box<dyn GamePlugin>> {
+        self.game_plugin.take()
     }
 }
 

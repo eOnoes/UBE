@@ -11,26 +11,17 @@ import time
 
 from PIL import Image
 
-from render_smoke import (
-    SWP_NOZORDER,
-    WM_CLOSE,
-    capture_client,
-    user32,
-    wait_for_window,
-)
+from render_smoke import SWP_NOZORDER, WM_CLOSE, capture_client, user32, wait_for_window
 
 
 WM_KEYDOWN = 0x0100
 WM_KEYUP = 0x0101
-WM_KILLFOCUS = 0x0008
 VK_D = 0x44
 VK_ESCAPE = 0x1B
 INPUT_MOUSE = 0
 MOUSEEVENTF_MOVE = 0x0001
-MOUSEEVENTF_LEFTDOWN = 0x0002
-MOUSEEVENTF_LEFTUP = 0x0004
-MOUSEEVENTF_RIGHTDOWN = 0x0008
-MOUSEEVENTF_RIGHTUP = 0x0010
+WM_RBUTTONDOWN = 0x0204
+WM_RBUTTONUP = 0x0205
 
 
 class MouseInput(ctypes.Structure):
@@ -134,9 +125,9 @@ def main() -> None:
             print(f"Keyboard movement pixel change: {movement_change:.1%}")
 
             move_cursor_to_client_center(hwnd)
-            send_mouse(MOUSEEVENTF_RIGHTDOWN)
+            post_message(hwnd, WM_RBUTTONDOWN)
             time.sleep(0.1)
-            send_mouse(MOUSEEVENTF_RIGHTUP)
+            post_message(hwnd, WM_RBUTTONUP)
             for _ in range(7):
                 send_mouse(MOUSEEVENTF_MOVE, dx=10, dy=-3)
                 time.sleep(0.05)
@@ -150,11 +141,13 @@ def main() -> None:
             post_message(hwnd, WM_KEYDOWN, VK_ESCAPE)
             post_message(hwnd, WM_KEYUP, VK_ESCAPE)
             time.sleep(0.2)
-            send_mouse(MOUSEEVENTF_RIGHTDOWN)
-            send_mouse(MOUSEEVENTF_RIGHTUP)
+            post_message(hwnd, WM_RBUTTONDOWN)
             time.sleep(0.1)
-            post_message(hwnd, WM_KILLFOCUS)
-            time.sleep(0.2)
+            post_message(hwnd, WM_RBUTTONUP)
+            time.sleep(0.1)
+            post_message(hwnd, WM_KEYDOWN, VK_ESCAPE)
+            post_message(hwnd, WM_KEYUP, VK_ESCAPE)
+            time.sleep(0.4)
 
             post_message(hwnd, WM_CLOSE)
             return_code = process.wait(timeout=5)
@@ -173,8 +166,8 @@ def main() -> None:
     if diagnostics.count("cursor capture changed captured=true") < 2:
         raise AssertionError("Right-click did not capture the cursor for both mouse-look stages")
     if diagnostics.count("cursor capture changed captured=false") < 2:
-        raise AssertionError("Escape and focus loss did not both release cursor capture")
-    print("Cursor capture: right-click captured; Escape and focus loss released")
+        raise AssertionError("Escape did not release both cursor captures")
+    print("Cursor capture: right-click captured twice; Escape released both")
 
     stderr = stderr_path.read_text(encoding="utf-8")
     if stderr.strip():

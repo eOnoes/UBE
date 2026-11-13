@@ -96,6 +96,16 @@ pub enum Key {
     S,
     D,
     V,
+    E,
+    R,
+    B,
+    C,
+    F,
+    X,
+    Digit1,
+    Digit2,
+    Digit3,
+    Digit4,
     Escape,
     F3,
     F5,
@@ -126,6 +136,7 @@ pub enum PlatformEvent<'a> {
     Resized(WindowSize),
     KeyboardInput(KeyInput),
     MouseLookButton { pressed: bool },
+    MousePrimaryButton { pressed: bool },
     MouseMotion { delta_x: f32, delta_y: f32 },
     Focused(bool),
     RedrawRequested,
@@ -263,6 +274,13 @@ impl ApplicationHandler for NativeApplication<'_> {
             } => PlatformEvent::MouseLookButton {
                 pressed: state == ElementState::Pressed,
             },
+            WindowEvent::MouseInput {
+                state,
+                button: MouseButton::Left,
+                ..
+            } => PlatformEvent::MousePrimaryButton {
+                pressed: state == ElementState::Pressed,
+            },
             WindowEvent::CursorMoved { position, .. } => {
                 if self
                     .window
@@ -331,6 +349,16 @@ fn map_key(key: PhysicalKey) -> Option<Key> {
         PhysicalKey::Code(KeyCode::KeyS) => Some(Key::S),
         PhysicalKey::Code(KeyCode::KeyD) => Some(Key::D),
         PhysicalKey::Code(KeyCode::KeyV) => Some(Key::V),
+        PhysicalKey::Code(KeyCode::KeyE) => Some(Key::E),
+        PhysicalKey::Code(KeyCode::KeyR) => Some(Key::R),
+        PhysicalKey::Code(KeyCode::KeyB) => Some(Key::B),
+        PhysicalKey::Code(KeyCode::KeyC) => Some(Key::C),
+        PhysicalKey::Code(KeyCode::KeyF) => Some(Key::F),
+        PhysicalKey::Code(KeyCode::KeyX) => Some(Key::X),
+        PhysicalKey::Code(KeyCode::Digit1) => Some(Key::Digit1),
+        PhysicalKey::Code(KeyCode::Digit2) => Some(Key::Digit2),
+        PhysicalKey::Code(KeyCode::Digit3) => Some(Key::Digit3),
+        PhysicalKey::Code(KeyCode::Digit4) => Some(Key::Digit4),
         PhysicalKey::Code(KeyCode::Escape) => Some(Key::Escape),
         PhysicalKey::Code(KeyCode::F3) => Some(Key::F3),
         PhysicalKey::Code(KeyCode::F5) => Some(Key::F5),
@@ -365,7 +393,7 @@ mod tests {
     fn movement_keys_use_physical_key_codes() {
         assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyW)), Some(Key::W));
         assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyV)), Some(Key::V));
-        assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyE)), None);
+        assert_eq!(map_key(PhysicalKey::Code(KeyCode::KeyE)), Some(Key::E));
         assert_eq!(
             map_key(PhysicalKey::Code(KeyCode::Escape)),
             Some(Key::Escape)

@@ -1,0 +1,19 @@
+[package]
+name = "surviving-ornith"
+description = "A compact original survival game built with the Unbiased Bob Engine"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "surviving_ornith"
+path = "src/lib.rs"
+
+[[bin]]
+name = "surviving-ornith"
+path = "src/main.rs"
+
+[dependencies]
+engine = { path = "../../crates/engine" }
+tracing-subscriber.workspace = true

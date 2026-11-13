@@ -3,6 +3,8 @@ mod camera_mode;
 mod config;
 mod debug;
 mod error;
+mod game;
+mod game_hud;
 mod movement_audio;
 mod simulation;
 
@@ -14,6 +16,7 @@ pub use engine_scene::{
     SceneEntity, SceneError, SceneFileError, Transform, load_scene, save_scene,
 };
 pub use error::RuntimeError;
+pub use game::{GameAction, GameFeedback, GameHud, GamePlugin, HudSlot, PlayerSnapshot};
 
 use std::collections::HashMap;
 use std::fs;
@@ -74,8 +77,11 @@ struct EngineApplication {
     physics: Option<engine_physics::PhysicsWorld>,
     audio: Option<AudioSystem>,
     footstep_clip: Option<AudioClip>,
+    sound_clips: HashMap<String, AudioClip>,
     footsteps: FootstepCadence,
     debug: DebugInspector,
+    game_hud: game_hud::GameHudPresenter,
+    game_plugin: Option<Box<dyn GamePlugin>>,
     model_indices: HashMap<String, usize>,
     object_capacity: usize,
     last_frame: Option<Instant>,
@@ -84,8 +90,9 @@ struct EngineApplication {
 }
 
 impl EngineApplication {
-    fn new(config: AppConfig) -> Self {
+    fn new(mut config: AppConfig) -> Self {
         let camera_controller = CameraController::new(config.camera_mode());
+        let game_plugin = config.take_game_plugin();
         Self {
             config,
             window: None,
@@ -95,8 +102,11 @@ impl EngineApplication {
             physics: None,
             audio: None,
             footstep_clip: None,
+            sound_clips: HashMap::new(),
             footsteps: FootstepCadence::default(),
             debug: DebugInspector::default(),
+            game_hud: game_hud::GameHudPresenter::default(),
+            game_plugin,
             model_indices: HashMap::new(),
             object_capacity: 0,
             last_frame: None,
@@ -110,6 +120,66 @@ impl EngineApplication {
         LoopControl::Exit
     }
 
+    fn apply_game_feedback(
+        audio: &Option<AudioSystem>,
+        clips: &HashMap<String, AudioClip>,
+        feedback: GameFeedback,
+        physics_changed: &mut bool,
+        respawn: &mut Option<[f32; 3]>,
+    ) {
+        for name in feedback.sound_effects {
+            if let Some(clip) = clips.get(&name) {
+                if let Some(audio) = audio {
+                    audio.play(clip);
+                    info!(effect = %name, "game sound playback requested");
+                }
+            } else {
+                warn!(effect = %name, "game requested an unregistered sound effect");
+            }
+        }
+        *physics_changed |= feedback.physics_changed;
+        if feedback.respawn.is_some() {
+            *respawn = feedback.respawn;
+        }
+    }
+
+    fn finish_game_feedback(&mut self, physics_changed: bool, respawn: Option<[f32; 3]>) {
+        if let Some(position) = respawn {
+            self.camera_controller.respawn(position);
+        }
+        if physics_changed || respawn.is_some() {
+            self.physics = Some(engine_physics::PhysicsWorld::from_scene(
+                self.simulation.as_ref().unwrap().scene(),
+                self.camera_controller.position(),
+            ));
+        }
+    }
+
+    fn dispatch_game_action(&mut self, action: GameAction) {
+        let feedback = self.game_plugin.as_mut().map(|plugin| {
+            plugin.on_action(
+                action,
+                self.simulation.as_mut().unwrap().scene_mut(),
+                self.camera_controller.player_snapshot(),
+            )
+        });
+        if let Some(feedback) = feedback {
+            let mut physics_changed = false;
+            let mut respawn = None;
+            Self::apply_game_feedback(
+                &self.audio,
+                &self.sound_clips,
+                feedback,
+                &mut physics_changed,
+                &mut respawn,
+            );
+            self.finish_game_feedback(physics_changed, respawn);
+        }
+        if let Some(plugin) = self.game_plugin.as_ref() {
+            info!(status = %plugin.hud().status, "gameplay status");
+        }
+    }
+
     fn render_frame(&mut self) -> Result<(), engine_render::RenderError> {
         let now = Instant::now();
         if let Some(last_frame) = self.last_frame.replace(now) {
@@ -121,12 +191,16 @@ impl EngineApplication {
             let camera = &mut self.camera_controller;
             let audio = &self.audio;
             let footstep_clip = &self.footstep_clip;
+            let sound_clips = &self.sound_clips;
+            let game_plugin = &mut self.game_plugin;
             let footsteps = &mut self.footsteps;
+            let mut game_physics_changed = false;
+            let mut respawn = None;
             let simulation_outcome = self
                 .simulation
                 .as_mut()
                 .expect("rendering requires an initialized simulation")
-                .advance_with(elapsed, |step| {
+                .advance_with(elapsed, |step, scene| {
                     let previous = camera.position();
                     let movement = camera.update(step, physics);
                     let horizontal_change = [
@@ -144,7 +218,18 @@ impl EngineApplication {
                         audio.play(clip);
                         info!(position = ?movement.position, "footstep playback requested");
                     }
+                    if let Some(plugin) = game_plugin.as_mut() {
+                        let feedback = plugin.fixed_update(scene, step, camera.player_snapshot());
+                        Self::apply_game_feedback(
+                            audio,
+                            sound_clips,
+                            feedback,
+                            &mut game_physics_changed,
+                            &mut respawn,
+                        );
+                    }
                 });
+            self.finish_game_feedback(game_physics_changed, respawn);
             if !simulation_outcome.dropped.is_zero() {
                 tracing::debug!(
                     dropped_ms = simulation_outcome.dropped.as_secs_f64() * 1_000.0,
@@ -176,6 +261,9 @@ impl EngineApplication {
                 size.width,
                 size.height,
             )
+        } else if let Some(plugin) = &self.game_plugin {
+            let size = self.window.as_ref().unwrap().size();
+            Some(self.game_hud.frame(&plugin.hud(), size.width, size.height))
         } else {
             None
         };
@@ -345,7 +433,11 @@ impl EventHandler for EngineApplication {
                     &scene,
                     self.camera_controller.position(),
                 );
-                let scene_update = self.config.take_scene_update();
+                let scene_update = self.config.take_scene_update().or_else(|| {
+                    self.game_plugin
+                        .as_ref()
+                        .map(|_| Box::new(|_: &mut Scene, _| {}) as simulation::SceneUpdate)
+                });
                 let simulation = match Simulation::from_scene(scene, scene_update) {
                     Ok(simulation) => simulation,
                     Err(error) => return self.fail(RuntimeError::simulation(error)),
@@ -363,32 +455,45 @@ impl EventHandler for EngineApplication {
                         .insert(item.model_path.to_owned(), assets.len());
                     assets.push(model);
                 }
-                let (audio, footstep_clip) = if let Some(path) = self.config.footstep_sound_path() {
-                    let clip = match AudioClip::load(path) {
-                        Ok(clip) => clip,
+                let footstep_clip = match self.config.footstep_sound_path() {
+                    Some(path) => match AudioClip::load(path) {
+                        Ok(clip) => Some(clip),
                         Err(error) => return self.fail(RuntimeError::audio(error)),
-                    };
-                    let audio = match AudioSystem::new() {
-                        Ok(audio) => audio,
+                    },
+                    None => None,
+                };
+                let mut sound_clips = HashMap::new();
+                for (name, path) in self.config.sound_effects() {
+                    match AudioClip::load(path) {
+                        Ok(clip) => {
+                            sound_clips.insert(name.clone(), clip);
+                        }
                         Err(error) => return self.fail(RuntimeError::audio(error)),
-                    };
-                    let output = audio.output_info();
-                    info!(
-                        channels = output.channels,
-                        sample_rate = output.sample_rate,
-                        clip_frames = clip.frames(),
-                        clip_duration_ms = clip.duration().as_secs_f64() * 1_000.0,
-                        "audio initialized"
-                    );
-                    (Some(audio), Some(clip))
+                    }
+                }
+                let audio = if footstep_clip.is_some() || !sound_clips.is_empty() {
+                    match AudioSystem::new() {
+                        Ok(audio) => {
+                            let output = audio.output_info();
+                            info!(
+                                channels = output.channels,
+                                sample_rate = output.sample_rate,
+                                game_sounds = sound_clips.len(),
+                                "audio initialized"
+                            );
+                            Some(audio)
+                        }
+                        Err(error) => return self.fail(RuntimeError::audio(error)),
+                    }
                 } else {
                     info!("audio disabled");
-                    (None, None)
+                    None
                 };
                 let object_capacity = simulation.model_transforms().len();
                 self.object_capacity = object_capacity;
                 self.audio = audio;
                 self.footstep_clip = footstep_clip;
+                self.sound_clips = sound_clips;
                 self.physics = Some(physics);
                 self.simulation = Some(simulation);
                 match Renderer::new(window.clone(), &assets, object_capacity) {
@@ -409,6 +514,26 @@ impl EventHandler for EngineApplication {
             PlatformEvent::KeyboardInput(input) => {
                 if let Some(command) = self.debug.command(input) {
                     return self.execute_debug_command(command);
+                }
+                if input.pressed && self.game_plugin.is_some() {
+                    use engine_platform::Key;
+                    let action = match input.key {
+                        Key::E => Some(GameAction::Interact),
+                        Key::R => Some(GameAction::Reload),
+                        Key::B => Some(GameAction::ToggleBuild),
+                        Key::X | Key::Tab => Some(GameAction::CycleBuild),
+                        Key::F => Some(GameAction::Eat),
+                        Key::C => Some(GameAction::CommandCompanions),
+                        Key::Digit1 => Some(GameAction::SelectSlot(1)),
+                        Key::Digit2 => Some(GameAction::SelectSlot(2)),
+                        Key::Digit3 => Some(GameAction::SelectSlot(3)),
+                        Key::Digit4 => Some(GameAction::SelectSlot(4)),
+                        _ => None,
+                    };
+                    if let Some(action) = action {
+                        self.dispatch_game_action(action);
+                        return LoopControl::Continue;
+                    }
                 }
                 if input.key == engine_platform::Key::V {
                     if input.pressed {
@@ -438,14 +563,18 @@ impl EventHandler for EngineApplication {
                 }
                 LoopControl::Continue
             }
-            PlatformEvent::MouseLookButton { pressed } => {
-                info!(pressed, "mouse look button changed");
+            PlatformEvent::MouseLookButton { pressed }
+            | PlatformEvent::MousePrimaryButton { pressed } => {
+                info!(pressed, "mouse button changed");
                 if pressed {
                     self.camera_controller.set_mouse_look(true);
                     if let Some(window) = &self.window
                         && let Err(error) = window.set_cursor_captured(true)
                     {
                         return self.fail(RuntimeError::platform(error));
+                    }
+                    if matches!(event, PlatformEvent::MousePrimaryButton { .. }) {
+                        self.dispatch_game_action(GameAction::PrimaryUse);
                     }
                 }
                 LoopControl::Continue
@@ -482,6 +611,7 @@ impl EventHandler for EngineApplication {
             PlatformEvent::Exiting => {
                 self.renderer.take();
                 self.footstep_clip.take();
+                self.sound_clips.clear();
                 self.audio.take();
                 LoopControl::Continue
             }

@@ -148,6 +148,21 @@ impl CameraController {
         self.position
     }
 
+    pub(crate) fn player_snapshot(&self) -> crate::PlayerSnapshot {
+        crate::PlayerSnapshot {
+            position: self.position,
+            yaw: self.yaw,
+            pitch: self.pitch,
+            camera_mode: self.mode,
+        }
+    }
+
+    pub(crate) fn respawn(&mut self, position: [f32; 3]) {
+        self.position = position;
+        self.clear_input();
+        self.rebuild_camera();
+    }
+
     #[cfg(test)]
     fn pitch(&self) -> f32 {
         self.pitch

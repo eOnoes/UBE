@@ -80,17 +80,17 @@ impl Simulation {
 
     #[cfg(test)]
     pub fn advance(&mut self, elapsed: Duration) -> StepOutcome {
-        self.advance_with(elapsed, |_| {})
+        self.advance_with(elapsed, |_, _| {})
     }
 
     pub fn advance_with(
         &mut self,
         elapsed: Duration,
-        mut before_scene_update: impl FnMut(Duration),
+        mut before_scene_update: impl FnMut(Duration, &mut Scene),
     ) -> StepOutcome {
         let outcome = self.fixed_step.advance(elapsed);
         for _ in 0..outcome.steps {
-            before_scene_update(SIMULATION_STEP);
+            before_scene_update(SIMULATION_STEP, &mut self.scene);
             (self.update)(&mut self.scene, SIMULATION_STEP);
         }
         outcome

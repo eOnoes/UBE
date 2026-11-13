@@ -51,31 +51,33 @@ All items below are required:
 | M6 | Second example and public-API reusability proof | COMPLETE | `milestone-6-checkpoint.md` |
 | M7 | Reference-scene performance, release hardening, and final acceptance evidence | COMPLETE | `milestone-7-checkpoint.md` |
 | UBE-1 | UBE / nerd 0.1 identity and first-person, third-person, and top-down gameplay cameras | COMPLETE | `nerd-0.1-checkpoint.md` |
+| ORN-1 | Surviving Ornith single-player survival vertical slice and original procedural assets | COMPLETE | `surviving-ornith.md` |
 | NET-1 | Online multiplayer architecture and first playable network slice | NOT STARTED | Scope required before implementation |
 
 ## Current release
 
-**UBE nerd 0.1 is implemented and locally verified.** The M0–M7 acceptance evidence remains intact; UBE-1 adds public product identity, release diagnostics, a configurable initial camera, and runtime cycling among all three views without duplicating player physics or movement state.
+**UBE nerd 0.1 and Surviving Ornith are implemented and locally verified.** The M0–M7 acceptance evidence remains intact. ORN-1 proves the public gameplay API with harvesting, two guns, hunting, taming, breeding, companion assistance, building, hunger, respawning, and all three camera modes on one original voxel island.
 
 ### Current verification
 
-- Workspace formatting, all-target compilation, strict Clippy, **65 tests**, and release build: PASS.
-- All **nine Windows smoke scripts**, including the new three-camera test: PASS.
-- Fresh reference-scene benchmark: **119.966 aggregate FPS**, **119.925 minimum interval FPS**, and **8.336 ms weighted average frame time** over 1,201 frames and 10.011192 seconds at 1280×720 on the RTX 4080 SUPER.
-- Architecture, controls, measured results, and limitations: `nerd-0.1-checkpoint.md`.
+- Workspace formatting, all-target compilation, strict Clippy, **75 tests**, and release build: PASS.
+- All **11 Windows smoke scripts**: nine engine regressions plus two Ornith native playtests: PASS.
+- The Ornith full-loop native playtest completed tree cutting, ore mining, wall construction, two cow tames, and calf breeding through ordinary keyboard and mouse input.
+- Historical reference-scene benchmark: **119.966 aggregate FPS**, **119.925 minimum interval FPS**, and **8.336 ms weighted average frame time** over 1,201 frames and 10.011192 seconds at 1280×720 on the RTX 4080 SUPER.
+- Engine architecture and measured results: `nerd-0.1-checkpoint.md`. Ornith controls, current evidence, and limitations: `surviving-ornith.md`.
 - Project license: MIT ACTIVE through the owner-provided root `LICENSE` (`Copyright (c) 2026 eOnoes`); all workspace packages inherit MIT. Future team contributor agreements remain OPEN. The verified Windows notice bundle is described in `licensing.md`.
 - Remote CI: NOT RUN. Owner acceptance of this new slice: NOT RECORDED.
 
 ## Next major scope: online multiplayer
 
-Online multiplayer is a recorded product requirement, but **NET-1 has not started and nerd 0.1 has no networking or multiplayer support**. Before coding, define server authority, transport and security, session flow, replicated state, prediction/reconciliation, testing strategy, and deployment. Do not infer multiplayer readiness from the existing modular crate boundaries.
+Online multiplayer is a recorded product requirement, but **NET-1 has not started and neither UBE nor Surviving Ornith has networking or multiplayer support**. Before coding, define server authority, transport and security, session flow, replicated state, prediction/reconciliation, testing strategy, and deployment. Do not infer multiplayer readiness from the existing modular crate boundaries.
 
 ## Other parked capabilities and limitations
 
 Non-Windows support, skeletal animation, visual scripting, open-world streaming, advanced global illumination, engine-owned multithreading, custom physics/audio engines, and a polished general-purpose editor remain outside the current release.
 
-There is no player avatar, third-person camera obstruction handling, or camera collision. F9 reload still replaces application update callbacks with default scene behavior. Additional limitations are recorded in the release checkpoints.
+Ornith is single-player with one finite map and bounded object pools. Full gameplay-state save/load, projectile physics, navigation meshes, resource respawning, third-person camera obstruction handling, and camera collision are not implemented. F9 reload still replaces application update callbacks with default scene behavior. Additional limitations are recorded in the release checkpoints.
 
 ## Next action
 
-Review UBE nerd 0.1, choose the project license and team ownership/contributor terms, then scope either the multiplayer milestone or the next small gameplay milestone explicitly.
+Playtest Surviving Ornith and capture owner feedback, then choose one bounded checkpoint: full survival save/load, combat/AI polish, more building pieces, or the separately scoped multiplayer milestone.
